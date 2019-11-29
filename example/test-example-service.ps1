@@ -5,7 +5,7 @@ $serviceName = "ExampleService-" + (New-Guid)
 
 $serviceLogDirecotry = "$PSScriptRoot/log"
 $serviceCommand = $currentPwshExe
-$serviceArguments = "$PSScriptRoot/test-service.ps1 -Message 'TestMessage with space!'"
+$serviceArguments = "$PSScriptRoot/test-service.ps1 -Message 'TestMessage with space!' -PathVar bind:PATH"
 
 $serviceBinPath = 'P:\projects\service-wrapper\main.exe'
 $serviceBinPath += ' -logdir "' + $serviceLogDirecotry + '"'

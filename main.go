@@ -4,12 +4,24 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/bioapfelsaft/service-wrapper/service"
 	"golang.org/x/sys/windows/svc"
 )
 
-// #todo config
+// #todo config ?
+// 1. -bind:NAME -> -NAME <Value>
+// 2. -NAME cfg:VALUE_NAME -> -NAME <Value>
+
+// wrapper.exe -cfg-file test.yaml
+// $env:NAME="123" + binding
+
+// load order
+// 1. config file
+// 2. environment
+// 3. wrapper.exe -arguments "..."
 
 func parseCommandLine(commandArgs string) ([]string, error) {
 	args := []string{}
@@ -61,9 +73,17 @@ func main() {
 
 	flag.Parse()
 
+	//
 	args, err := parseCommandLine(*arguments)
 	if err != nil {
 		log.Fatalf("invalid arguments: %v", err)
+	}
+
+	//
+	for i := 0; i < len(args); i++ {
+		if strings.HasPrefix(args[i], "bind:") {
+			args[i] = os.Getenv(strings.TrimLeft(args[i], "bind:"))
+		}
 	}
 
 	//

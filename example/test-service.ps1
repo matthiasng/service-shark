@@ -1,6 +1,9 @@
 param(
-    [string]$Message
+    [string]$Message,
+    [string]$PathVar
 )
+
+Write-Host "PATH: $PathVar"
 
 $i = 0
 while($true) {
