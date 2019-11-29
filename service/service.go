@@ -2,43 +2,41 @@ package service
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"time"
+
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc/eventlog"
-	"os"
-	"os/exec"
-)
-
-var (
-	//command = "C:/Program Files/PowerShell/7-preview/pwsh.exe"
-	command = "C:/Program Files/PowerShell/7-preview/preview/pwsh-preview.cmd"
-	arguments = []string {
-		"P:/_dev/projects/service-wrapper/test.ps1",
-	}
-
-	logFilePath = "P:/_dev/projects/service-wrapper/test.log"
 )
 
 var (
 	eventLog debug.Log
-	cmd *exec.Cmd
+	cmd      *exec.Cmd
 )
 
+type Configuration struct {
+	ServiceName  string
+	Command      string
+	Arguments    []string
+	LogDirectory string // #todo default
+}
 
-
-func Run(name string, isAnInteractiveSession bool) {
+func Run(config Configuration, isAnInteractiveSession bool) {
 	var err error
 	if isAnInteractiveSession {
-		eventLog = debug.New(name)
+		eventLog = debug.New(config.ServiceName)
 	} else {
-		eventLog, err = eventlog.Open(name)
+		eventLog, err = eventlog.Open(config.ServiceName) // #todo replace eventlog with custom logfile
 		if err != nil {
 			return
 		}
 	}
-	defer func(){ _ = eventLog.Close() }()
+	defer func() { _ = eventLog.Close() }()
 
-	cmd = exec.Command(command, arguments...)
+	cmd = exec.Command(config.Command, config.Arguments...)
 
 	var runFunc func(string, svc.Handler) error
 	if isAnInteractiveSession {
@@ -47,12 +45,20 @@ func Run(name string, isAnInteractiveSession bool) {
 
 		runFunc = debug.Run
 	} else {
+		err = os.MkdirAll(config.LogDirectory, os.ModePerm)
+		if err != nil {
+			_ = eventLog.Error(1, fmt.Sprintf("Error - os.MkdirAll(%s, os.ModePerm): %v", config.LogDirectory, err))
+			return
+		}
+
+		logFileName := time.Now().Format("02-01-2006_15-04-05") + ".log"
+		logFilePath := path.Join(config.LogDirectory, logFileName)
 		file, err := os.Create(logFilePath)
 		if err != nil {
 			_ = eventLog.Error(1, fmt.Sprintf("Error - os.Create(%s): %v", logFilePath, err))
 			return
 		}
-		defer func(){ _ = file.Close() }()
+		defer func() { _ = file.Close() }()
 
 		cmd.Stdout = file
 		cmd.Stderr = file
@@ -60,18 +66,18 @@ func Run(name string, isAnInteractiveSession bool) {
 		runFunc = svc.Run
 	}
 
-	_ = eventLog.Error(1, fmt.Sprintf("%s service starting", name))
-	err = runFunc(name, &serviceWrapper{})
+	_ = eventLog.Error(1, "service starting")
+	err = runFunc(config.ServiceName, &serviceWrapper{})
 	if err != nil {
-		_ = eventLog.Error(1, fmt.Sprintf("%s service failed: %v", name, err))
+		_ = eventLog.Error(1, fmt.Sprintf("service failed: %v", err))
 		return
 	}
-	_ = eventLog.Info(1, fmt.Sprintf("%s service stopped", name))
+	_ = eventLog.Info(1, "service stopped")
 }
 
 type serviceWrapper struct{}
 
-func (m *serviceWrapper) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (svcSpecificEC bool, exitCode  uint32) {
+func (m *serviceWrapper) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
 	changes <- svc.Status{State: svc.StartPending}
 
 	//
@@ -88,11 +94,10 @@ func (m *serviceWrapper) Execute(args []string, r <-chan svc.ChangeRequest, chan
 
 		if err != nil {
 			_ = eventLog.Error(1, fmt.Sprintf("Error - cmd.Wait(): %v", err))
-			// #todo crash service!
 		}
 
 		os.Exit(1)
-	} ()
+	}()
 
 	changes <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown}
 
@@ -106,7 +111,7 @@ loop:
 			changes <- svc.Status{State: svc.StopPending}
 
 			_ = eventLog.Info(1, "Kill process")
-			_ = cmd.Process.Kill()	// #todo kill child process ? test with "C:/Program Files/PowerShell/7-preview/preview/pwsh-preview.cmd"
+			_ = cmd.Process.Kill() // #todo kill child process. Test Command -> "C:/Program Files/PowerShell/7-preview/preview/pwsh-preview.cmd"
 			_ = eventLog.Info(1, "dead!")
 
 			changes <- svc.Status{State: svc.Stopped}
