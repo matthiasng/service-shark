@@ -66,12 +66,6 @@ func main() {
 		log.Fatalf("invalid arguments: %v", err)
 	}
 
-	fmt.Println(*arguments)
-	fmt.Println("-----------------")
-	for _, e := range args {
-		fmt.Println(e)
-	}
-
 	//
 	isAnInteractiveSession, err := svc.IsAnInteractiveSession()
 	if err != nil {
@@ -85,13 +79,4 @@ func main() {
 		Arguments:    args,
 		LogDirectory: *logDirectory,
 	}, isAnInteractiveSession)
-
-	// service.Run(service.Configuration{
-	// 	ServiceName: *serviceName,
-	// 	Command:     "C:/Program Files/PowerShell/7-preview/pwsh.exe",
-	// 	Arguments: []string{
-	// 		"P:/projects/service-wrapper/test.ps1",
-	// 	},
-	// 	LogDirectory: "P:/projects/service-wrapper/log",
-	// }, isAnInteractiveSession)
 }
