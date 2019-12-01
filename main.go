@@ -1,89 +1,40 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
-	"github.com/bioapfelsaft/service-wrapper/service"
+	"github.com/akamensky/argparse"
+	"github.com/matthiasng/service-wrapper/cli"
+	"github.com/matthiasng/service-wrapper/service"
 	"golang.org/x/sys/windows/svc"
 )
 
-// #todo config ?
-// 1. -bind:NAME -> -NAME <Value>
-// 2. -NAME cfg:VALUE_NAME -> -NAME <Value>
-
-// wrapper.exe -cfg-file test.yaml
-// $env:NAME="123" + binding
-
-// load order
-// 1. config file
-// 2. environment
-// 3. wrapper.exe -arguments "..."
-
-func parseCommandLine(commandArgs string) ([]string, error) {
-	args := []string{}
-
-	insideQuotes := false
-	quoteStartPos := 0
-
-	currentArg := ""
-
-	for i := 0; i < len(commandArgs); i++ {
-		c := commandArgs[i]
-
-		if c == '\'' {
-			quoteStartPos = i
-			if insideQuotes && (i+1) < len(commandArgs) && commandArgs[i+1] != ' ' {
-				return []string{}, fmt.Errorf("end quote must be followed by a space - position %d", i)
-			}
-
-			insideQuotes = !insideQuotes
-			continue
-		}
-
-		if c == ' ' && !insideQuotes {
-			if len(currentArg) > 0 {
-				args = append(args, currentArg)
-				currentArg = ""
-			}
-
-			continue
-		}
-
-		currentArg += string(c)
-	}
-
-	if insideQuotes {
-		return []string{}, fmt.Errorf("Unclosed quote in command line - start position %d", quoteStartPos)
-	}
-
-	args = append(args, currentArg)
-	return args, nil
-}
-
 func main() {
-	serviceName := "WinServiceWrapper" // #todo ?
+	parser := argparse.NewParser("service-wrapper", `Run a "-command" with "-arguments" as service`)
 
-	command := flag.String("command", "", "Command")
-	logDirectory := flag.String("logdir", "", "Log directory")
-	arguments := flag.String("arguments", "", "Arguments")
+	serviceName := parser.String("n", "name", &argparse.Options{
+		Required: true,
+		Help:     "Servicename",
+	})
+	logDirectory := parser.String("l", "logdirectory", &argparse.Options{
+		Required: true,
+		Help:     "Log directory",
+	})
+	command := parser.String("c", "command", &argparse.Options{
+		Required: true,
+		Help:     "Command",
+	})
+	arguments := parser.List("a", "arg", &argparse.Options{
+		Required: true,
+		Help:     `Command arguments. Example: '... -a "-key" -a "value" -a "--key2" -a "value"'`,
+	})
 
-	flag.Parse()
-
-	//
-	args, err := parseCommandLine(*arguments)
+	err := parser.Parse(os.Args)
 	if err != nil {
-		log.Fatalf("invalid arguments: %v", err)
-	}
-
-	//
-	for i := 0; i < len(args); i++ {
-		if strings.HasPrefix(args[i], "bind:") {
-			args[i] = os.Getenv(strings.TrimLeft(args[i], "bind:"))
-		}
+		fmt.Print(parser.Usage(err))
+		os.Exit(2)
 	}
 
 	//
@@ -93,10 +44,17 @@ func main() {
 	}
 
 	//
-	service.Run(service.Configuration{
-		ServiceName:  serviceName,
-		Command:      *command,
-		Arguments:    args,
-		LogDirectory: *logDirectory,
-	}, isAnInteractiveSession)
+	wrapper := service.Wrapper{
+		Config: service.Configuration{
+			ServiceName:            *serviceName,
+			Command:                *command,
+			Arguments:              cli.BindArguments(*arguments),
+			LogDirectory:           *logDirectory,
+			IsAnInteractiveSession: isAnInteractiveSession,
+		},
+	}
+	err = wrapper.Run()
+	if err != nil {
+		log.Fatalf("wrapper.Run(): %v", err)
+	}
 }
