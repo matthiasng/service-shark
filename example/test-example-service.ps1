@@ -13,7 +13,7 @@ $serviceBinPath += ' -l "' + $serviceLogDirecotry + '"'
 $serviceBinPath += ' -c "' + $serviceCommand + '"'
 $serviceBinPath += ' -a "' + $psTestScript + '"'
 $serviceBinPath += ' -a "-Message" -a "TestMessage with space!"'
-$serviceBinPath += ' -a "-PathVar" -a "-bind:PATH"'
+$serviceBinPath += ' -a "-PathVar" -a "bind:PATH"'
 
 
 Write-Host "New-Service:"
