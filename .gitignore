@@ -1,5 +1,6 @@
 .idea/
 
+dist/
 log/
 
 # Binaries for programs and plugins
