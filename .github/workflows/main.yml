@@ -71,8 +71,8 @@ jobs:
       uses: actions/checkout@v1
     - name: build
       run: |
-        $env:GOOS=windows
-        $env:GOARCH=amd64
+        $env:GOOS="windows"
+        $env:GOARCH="amd64"
         go build -o bin/service-wrapper-amd64.exe
     - name: upload artifacts
       uses: actions/upload-artifact@master
