@@ -1,6 +1,4 @@
 github.com/akamensky/argparse v0.0.0-20191006154803-1427fe674291 h1:EQ9p1v9+urDzbGQfAcBf9fGuDtYqFNE7YJHZ54TWPTk=
 github.com/akamensky/argparse v0.0.0-20191006154803-1427fe674291/go.mod h1:pdh+2piXurh466J9tqIqq39/9GO2Y8nZt6Cxzu18T9A=
-github.com/bioapfelsaft/service-wrapper v0.0.0-20191201190517-7f0575270b8c h1:/8y95ksXi6QqXVDVMiEHYiIIpB3WPaIyLjT8bwnE8XA=
-github.com/bioapfelsaft/service-wrapper v0.0.0-20191201190517-7f0575270b8c/go.mod h1:otu6HFi3pDmbkyG33JQ9iSowjRYss5nwcZWgFFW8qIg=
 golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9 h1:ZBzSG/7F4eNKz2L3GE9o300RX0Az1Bw5HF7PDraD+qU=
 golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
