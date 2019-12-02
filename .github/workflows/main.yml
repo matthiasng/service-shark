@@ -22,7 +22,7 @@ jobs:
 
       - name: Run linters
         run: |
-          #export PATH=$PATH:$(go env GOPATH)/bin  # temporary fix. See https://github.com/actions/setup-go/issues/14
+          $env:PATH += ";$(go env GOPATH)/bin"  # temporary fix. See https://github.com/actions/setup-go/issues/14
           golangci-lint -E bodyclose,misspell,gocyclo,dupl,gofmt,golint,unconvert,goimports,depguard,gocritic,funlen,interfacer run
 
   test:
