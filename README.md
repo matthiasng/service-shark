@@ -12,7 +12,7 @@ Service Shark is:
 - easy to use
 - lightweight (~2 MB)
 - has zero runtime dependencies (no .NET Framework, Java, ...)
-- writte in [golang](https://golang.org/)
+- written in [golang](https://golang.org/)
 
 Service Shark is not:
 - a service manager. Their are already easy ways to manage Windows services ([powershell](https://docs.microsoft.com/de-de/powershell/scripting/samples/managing-services?view=powershell-6), [cmd](https://docs.microsoft.com/de-de/windows-server/administration/windows-commands/sc-create), [NSSM](https://nssm.cc/))
