@@ -51,7 +51,7 @@ func main() {
 		Stderr: os.Stderr,
 	}
 
-	if isAnInteractiveSession {
+	if !isAnInteractiveSession {
 		err = os.MkdirAll(*logDirectory, os.ModePerm)
 		if err != nil {
 			log.Fatalf("Error - os.MkdirAll(%s, os.ModePerm): %v", *logDirectory, err)
