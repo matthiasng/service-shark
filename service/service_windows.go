@@ -5,15 +5,13 @@ package service
 import (
 	"os"
 	"path/filepath"
-	"sync"
-	"syscall"
 
 	wsvc "golang.org/x/sys/windows/svc"
+	wsvcDebug "golang.org/x/sys/windows/svc/debug"
 )
 
 // Create variables for svc and signal functions so we can mock them in tests
 var svcIsAnInteractiveSession = wsvc.IsAnInteractiveSession
-var svcRun = wsvc.Run
 
 // Run runs an implementation of the Service interface.
 //
@@ -25,11 +23,7 @@ var svcRun = wsvc.Run
 //
 // Note that WM_CLOSE is not handled (end task) and the Service's Stop method will
 // not be called.
-//
-// The sig parameter is to keep parity with the non-Windows API. Only syscall.SIGINT
-// (Ctrl+C) can be handled on Windows. Nevertheless, you can override the default
-// signals which are handled by specifying sig.
-func Run(service Service) error {
+func Run(service Service, name string) error {
 	var err error
 
 	interactive, err := svcIsAnInteractiveSession()
@@ -38,9 +32,10 @@ func Run(service Service) error {
 	}
 
 	ws := &windowsService{
-		i:             service,
+		name:          name,
+		svc:           service,
 		isInteractive: interactive,
-		signals:       []os.Signal{syscall.SIGINT},
+		exitChan:      make(chan error),
 	}
 
 	if ws.IsWindowsService() {
@@ -52,98 +47,88 @@ func Run(service Service) error {
 		}
 	}
 
-	if err = service.Init(ws); err != nil {
-		return err
-	}
-
 	return ws.run()
 }
 
 type windowsService struct {
-	i             Service
-	errSync       sync.Mutex
-	stopStartErr  error
+	name          string
+	svc           Service
 	isInteractive bool
-	signals       []os.Signal
-	Name          string
-}
-
-func (ws *windowsService) setError(err error) {
-	ws.errSync.Lock()
-	ws.stopStartErr = err
-	ws.errSync.Unlock()
-}
-
-func (ws *windowsService) getError() error {
-	ws.errSync.Lock()
-	err := ws.stopStartErr
-	ws.errSync.Unlock()
-	return err
+	exitChan      chan error
+	err           error
 }
 
 func (ws *windowsService) IsWindowsService() bool {
 	return !ws.isInteractive
 }
 
+func (ws *windowsService) ExitService(err error) {
+	ws.exitChan <- err
+	close(ws.exitChan)
+}
+
+func (ws *windowsService) Name() string {
+	return ws.name
+}
+
+func (ws *windowsService) setError(err error) {
+	ws.err = err
+}
+
+func (ws *windowsService) getError() error {
+	return ws.err
+}
+
 func (ws *windowsService) run() error {
 	ws.setError(nil)
-	if ws.IsWindowsService() {
-		// Return error messages from start and stop routines
-		// that get executed in the Execute method.
-		// Guarded with a mutex as it may run a different thread
-		// (callback from Windows).
-		runErr := svcRun(ws.Name, ws)
-		startStopErr := ws.getError()
-		if startStopErr != nil {
-			return startStopErr
-		}
-		if runErr != nil {
-			return runErr
-		}
-		return nil
+
+	run := wsvc.Run
+	if !ws.IsWindowsService() {
+		run = wsvcDebug.Run
 	}
 
-	err := ws.i.Start()
-	if err != nil {
-		return err
+	runErr := run(ws.name, ws)
+	startStopErr := ws.getError()
+	if startStopErr != nil {
+		return startStopErr
 	}
-
-	signalChan := make(chan os.Signal, 1)
-	signalNotify(signalChan, ws.signals...)
-	<-signalChan
-
-	err = ws.i.Stop()
-
-	return err
+	if runErr != nil {
+		return runErr
+	}
+	return nil
 }
 
 // Execute is invoked by Windows
 func (ws *windowsService) Execute(args []string, r <-chan wsvc.ChangeRequest, changes chan<- wsvc.Status) (bool, uint32) {
-	const cmdsAccepted = wsvc.AcceptStop | wsvc.AcceptShutdown
 	changes <- wsvc.Status{State: wsvc.StartPending}
 
-	if err := ws.i.Start(); err != nil {
+	if err := ws.svc.Start(ws); err != nil {
 		ws.setError(err)
 		return true, 1
 	}
 
-	changes <- wsvc.Status{State: wsvc.Running, Accepts: cmdsAccepted}
+	changes <- wsvc.Status{State: wsvc.Running, Accepts: wsvc.AcceptStop | wsvc.AcceptShutdown}
 loop:
 	for {
-		c := <-r
-		switch c.Cmd {
-		case wsvc.Interrogate:
-			changes <- c.CurrentStatus
-		case wsvc.Stop, wsvc.Shutdown:
-			changes <- wsvc.Status{State: wsvc.StopPending}
-			err := ws.i.Stop()
-			if err != nil {
-				ws.setError(err)
-				return true, 2
+		select {
+		case c := <-r:
+			switch c.Cmd {
+			case wsvc.Interrogate:
+				changes <- c.CurrentStatus
+			case wsvc.Stop, wsvc.Shutdown:
+				changes <- wsvc.Status{State: wsvc.StopPending}
+				err := ws.svc.Stop()
+				if err != nil {
+					ws.setError(err)
+					return true, 2
+				}
+				break loop
+			default:
+				continue loop
 			}
-			break loop
-		default:
-			continue loop
+		case err := <-ws.exitChan:
+			ws.setError(err)
+			return true, 3
 		}
 	}
 

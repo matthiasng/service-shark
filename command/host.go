@@ -24,7 +24,7 @@ type Host struct {
 	quitCompleted chan struct{}
 }
 
-func (h *Host) Init(env service.Environment) error {
+func (h *Host) init(env service.Environment) error {
 	h.cmd = exec.Command(h.CmdConfig.Name, h.CmdConfig.Arguments...)
 
 	if env.IsWindowsService() {
@@ -33,9 +33,7 @@ func (h *Host) Init(env service.Environment) error {
 			return err
 		}
 
-		name := "" // #todo
-
-		logFileName := fmt.Sprintf("%s_%s.log", name, time.Now().Format("02-01-2006_15-04-05"))
+		logFileName := fmt.Sprintf("%s_%s.log", env.Name(), time.Now().Format("02-01-2006_15-04-05"))
 		logFilePath := path.Join(h.LogDirecotry, logFileName)
 
 		logFile, err := os.Create(logFilePath)
@@ -53,7 +51,12 @@ func (h *Host) Init(env service.Environment) error {
 	return h.cmd.Start()
 }
 
-func (h *Host) Start() error {
+func (h *Host) Start(env service.Environment) error {
+	err := h.init(env)
+	if err != nil {
+		return err
+	}
+
 	h.quitSignal = make(chan struct{})
 	h.quitCompleted = make(chan struct{})
 
@@ -64,8 +67,8 @@ func (h *Host) Start() error {
 	}()
 
 	go func() {
-		_ = h.cmd.Wait()
-		os.Exit(1) // service command stopped -> stop service
+		err = h.cmd.Wait()
+		env.ExitService(err) // service command stopped -> service error
 	}()
 
 	return nil

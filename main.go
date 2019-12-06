@@ -7,6 +7,8 @@ import (
 	"github.com/matthiasng/service-shark/service"
 )
 
+// #todo working directory
+
 // 	parser := argparse.NewParser("service-wrapper", `Run a "-command" with "-arguments" as service`)
 
 // 	serviceName := parser.String("n", "name", &argparse.Options{
@@ -37,8 +39,8 @@ import (
 func main() {
 	host := command.Host{
 		CmdConfig: command.Config{
-			Name: "powershell",
-			//Name: "C:/Program Files/PowerShell/7-preview/preview/pwsh-preview.cmd",
+			//Name: "powershell",
+			Name: "C:/Program Files/PowerShell/7-preview/preview/pwsh-preview.cmd",
 			Arguments: []string{
 				`P:\_dev\projects\service-shark\example\test-service.ps1`,
 			},
@@ -46,7 +48,7 @@ func main() {
 		LogDirecotry: "c:/tmp",
 	}
 
-	if err := service.Run(&host); err != nil {
-		log.Fatal(err)
+	if err := service.Run(&host, "todo"); err != nil {
+		log.Fatalf("[error] - %v", err)
 	}
 }
