@@ -6,23 +6,24 @@ $psTestScript = "$PSScriptRoot/test-service.ps1"
 
 $serviceName = "ExampleService-" + (New-Guid)
 
-$serviceLogDirecotry = "$PSScriptRoot/log"
+$serviceWorkingDir = $PSScriptRoot
 $serviceCommand = $currentPwshExe
 
 $serviceSharkPath = "$PSScriptRoot/../service-shark.exe"
 
 if(!(Test-Path $serviceSharkPath)) {
-    Write-Host "Run: go build -o service-shark.exe .\main.go"
+    Write-Host "service-shark.exe not found. Run 'go build -o service-shark.exe .\main.go'"
     exit
 }
 
 $serviceBinPath = $serviceSharkPath
-$serviceBinPath += ' -n "' + $serviceName + '"'
-$serviceBinPath += ' -l "' + $serviceLogDirecotry + '"'
-$serviceBinPath += ' -c "' + $serviceCommand + '"'
-$serviceBinPath += ' -a "' + $psTestScript + '"'
-$serviceBinPath += ' -a "-Message" -a "TestMessage with space!"'
-$serviceBinPath += ' -a "-PathVar" -a "bind:PATH"'
+$serviceBinPath += ' -name "' + $serviceName + '"'
+$serviceBinPath += ' -workdir "' + $serviceWorkingDir + '"'
+$serviceBinPath += ' -cmd "' + $serviceCommand + '"'
+$serviceBinPath += ' --'
+$serviceBinPath += ' "' + $psTestScript + '"'
+$serviceBinPath += ' -Message "TestMessage with space!"'
+$serviceBinPath += ' -PathVar "env:PATH"'
 
 
 Write-Host "New-Service:"
@@ -33,8 +34,7 @@ try {
     Start-Service -Name $serviceName
 
     Start-Sleep(5)
-}
-finally {
+} finally {
     Stop-Service -Name $serviceName
     Remove-Service -Name $serviceName
 }

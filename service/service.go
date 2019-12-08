@@ -7,12 +7,15 @@ package service
 //
 // Implement this interface and pass it to the Run function to start your program.
 type Service interface {
-	// Start is called after Init. This method must be non-blocking.
+	// Start must be non-blocking.
 	Start(Environment) error
 
 	// Stop is called in response to syscall.SIGINT, syscall.SIGTERM, or when a
 	// Windows Service is stopped.
 	Stop() error
+
+	// Name returns the service name.
+	Name() string
 }
 
 // Environment contains information about the environment
@@ -23,7 +26,4 @@ type Environment interface {
 
 	// ExitService can be used to signal a service crash. Service will exit with a user define error code 3.
 	ExitService(error)
-
-	// Name returns the service name.
-	Name() string
 }

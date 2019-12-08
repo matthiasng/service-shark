@@ -4,14 +4,24 @@ package service
 
 import (
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	wsvc "golang.org/x/sys/windows/svc"
-	wsvcDebug "golang.org/x/sys/windows/svc/debug"
 )
 
 // Create variables for svc and signal functions so we can mock them in tests
 var svcIsAnInteractiveSession = wsvc.IsAnInteractiveSession
+var svcRun = wsvc.Run
+var signalNotify = signal.Notify
+
+// FixWorkingDirectory changes the working directory to the exeutable directory.
+// The working directory for a Windows Service is C:\Windows\System32 ...
+func FixWorkingDirectory() error {
+	dir := filepath.Dir(os.Args[0])
+	return os.Chdir(dir)
+}
 
 // Run runs an implementation of the Service interface.
 //
@@ -23,7 +33,7 @@ var svcIsAnInteractiveSession = wsvc.IsAnInteractiveSession
 //
 // Note that WM_CLOSE is not handled (end task) and the Service's Stop method will
 // not be called.
-func Run(service Service, name string) error {
+func Run(service Service) error {
 	var err error
 
 	interactive, err := svcIsAnInteractiveSession()
@@ -32,19 +42,10 @@ func Run(service Service, name string) error {
 	}
 
 	ws := &windowsService{
-		name:          name,
+		name:          service.Name(),
 		svc:           service,
 		isInteractive: interactive,
-		exitChan:      make(chan error),
-	}
-
-	if ws.IsWindowsService() {
-		// the working directory for a Windows Service is C:\Windows\System32
-		// this is almost certainly not what the user wants.
-		dir := filepath.Dir(os.Args[0])
-		if err = os.Chdir(dir); err != nil {
-			return err
-		}
+		signalErrChan: make(chan error, 1),
 	}
 
 	return ws.run()
@@ -54,8 +55,8 @@ type windowsService struct {
 	name          string
 	svc           Service
 	isInteractive bool
-	exitChan      chan error
-	err           error
+	signalErrChan chan error
+	serviceErr    error
 }
 
 func (ws *windowsService) IsWindowsService() bool {
@@ -63,38 +64,47 @@ func (ws *windowsService) IsWindowsService() bool {
 }
 
 func (ws *windowsService) ExitService(err error) {
-	ws.exitChan <- err
-	close(ws.exitChan)
-}
-
-func (ws *windowsService) Name() string {
-	return ws.name
-}
-
-func (ws *windowsService) setError(err error) {
-	ws.err = err
-}
-
-func (ws *windowsService) getError() error {
-	return ws.err
+	ws.signalErrChan <- err
 }
 
 func (ws *windowsService) run() error {
-	ws.setError(nil)
-
-	run := wsvc.Run
-	if !ws.IsWindowsService() {
-		run = wsvcDebug.Run
+	var runErr error
+	if ws.IsWindowsService() {
+		runErr = svcRun(ws.name, ws)
+	} else {
+		runErr = ws.runInteractive(ws.name, ws)
 	}
 
-	runErr := run(ws.name, ws)
-	startStopErr := ws.getError()
-	if startStopErr != nil {
-		return startStopErr
+	if ws.serviceErr != nil {
+		return ws.serviceErr
 	}
-	if runErr != nil {
-		return runErr
+
+	return runErr
+}
+
+func (ws *windowsService) runInteractive(name string, handler wsvc.Handler) error {
+	cmds := make(chan wsvc.ChangeRequest)
+	changes := make(chan wsvc.Status)
+
+	sig := make(chan os.Signal)
+	signalNotify(sig, os.Interrupt)
+
+	go func() {
+		status := wsvc.Status{State: wsvc.Stopped}
+		for {
+			select {
+			case <-sig:
+				cmds <- wsvc.ChangeRequest{Cmd: wsvc.Stop, CurrentStatus: status}
+			case <-changes:
+			}
+		}
+	}()
+
+	_, runErrNo := handler.Execute([]string{name}, cmds, changes)
+	if runErrNo != 0 {
+		return syscall.Errno(runErrNo)
 	}
+
 	return nil
 }
 
@@ -103,7 +113,7 @@ func (ws *windowsService) Execute(args []string, r <-chan wsvc.ChangeRequest, ch
 	changes <- wsvc.Status{State: wsvc.StartPending}
 
 	if err := ws.svc.Start(ws); err != nil {
-		ws.setError(err)
+		ws.serviceErr = err
 		return true, 1
 	}
 
@@ -119,15 +129,15 @@ loop:
 				changes <- wsvc.Status{State: wsvc.StopPending}
 				err := ws.svc.Stop()
 				if err != nil {
-					ws.setError(err)
+					ws.serviceErr = err
 					return true, 2
 				}
 				break loop
 			default:
 				continue loop
 			}
-		case err := <-ws.exitChan:
-			ws.setError(err)
+		case err := <-ws.signalErrChan:
+			ws.serviceErr = err
 			return true, 3
 		}
 	}

@@ -1,54 +1,52 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
+	"os"
 
+	"github.com/matthiasng/service-shark/cli"
 	"github.com/matthiasng/service-shark/command"
 	"github.com/matthiasng/service-shark/service"
 )
 
-// #todo working directory
+var arguments = cli.Arguments{}
 
-// 	parser := argparse.NewParser("service-wrapper", `Run a "-command" with "-arguments" as service`)
-
-// 	serviceName := parser.String("n", "name", &argparse.Options{
-// 		Required: true,
-// 		Help:     "Servicename",
-// 	})
-// 	logDirectory := parser.String("l", "logdirectory", &argparse.Options{
-// 		Required: true,
-// 		Help:     "Log directory",
-// 	})
-// 	command := parser.String("c", "command", &argparse.Options{
-// 		Required: true,
-// 		Help:     "Command",
-// 	})
-// 	arguments := parser.List("a", "arg", &argparse.Options{
-// 		Required: true,
-// 		Help:     `Command arguments. Example: '... -a "-key" -a "value" -a "--key2" -a "value"'`,
-// 	})
-
-// 	err := parser.Parse(os.Args)
-// 	if err != nil {
-// 		fmt.Print(parser.Usage(err))
-// 		os.Exit(2)
-// 	}
-
-// cli.BindArguments(*arguments),
-
-func main() {
-	host := command.Host{
-		CmdConfig: command.Config{
-			//Name: "powershell",
-			Name: "C:/Program Files/PowerShell/7-preview/preview/pwsh-preview.cmd",
-			Arguments: []string{
-				`P:\_dev\projects\service-shark\example\test-service.ps1`,
-			},
-		},
-		LogDirecotry: "c:/tmp",
+func init() {
+	flag.CommandLine.Usage = func() {
+		fmt.Println("Usage of Service Shark:")
+		flag.PrintDefaults()
 	}
 
-	if err := service.Run(&host, "todo"); err != nil {
-		log.Fatalf("[error] - %v", err)
+	flag.StringVar(&arguments.Name, "name", "", "Service name [required]")
+	flag.StringVar(&arguments.WorkingDirectory, "workdir", "", "Working directory [required]")
+	flag.StringVar(&arguments.LogDirectory, "logdir", "./log", "Log directory. Absolute path or relative to working directory.")
+	flag.StringVar(&arguments.Command, "cmd", "", "Command [required]")
+
+	flag.Parse()
+}
+
+func main() {
+	if err := service.FixWorkingDirectory(); err != nil {
+		log.Fatal(err)
+	}
+
+	arguments.CommandArguments = cli.ExpandArguments(flag.Args())
+
+	if err := cli.Validate(arguments); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := os.Chdir(arguments.WorkingDirectory); err != nil {
+		log.Fatal(err)
+	}
+
+	host := command.Host{
+		Arguments: arguments,
+	}
+
+	if err := service.Run(&host); err != nil {
+		log.Fatal(err)
 	}
 }

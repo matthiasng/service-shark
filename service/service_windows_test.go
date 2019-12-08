@@ -2,479 +2,180 @@
 
 package service
 
-// import (
-// 	"errors"
-// 	"os"
-// 	"path/filepath"
-// 	"reflect"
-// 	"runtime"
-// 	"syscall"
-// 	"testing"
-// 	"time"
-
-// 	wsvc "golang.org/x/sys/windows/svc"
-// )
-
-// func setupWinServiceTest(wsf *mockWinServiceFuncs) {
-// 	// wsfWrapper allows signalNotify, svcIsInteractive, and svcRun to be set once.
-// 	// Individual test functions set "wsf" to add behavior.
-// 	wsfWrapper := &mockWinServiceFuncs{
-// 		signalNotify: func(c chan<- os.Signal, sig ...os.Signal) {
-// 			if c == nil {
-// 				panic("os/signal: Notify using nil channel")
-// 			}
-
-// 			if wsf.signalNotify != nil {
-// 				wsf.signalNotify(c, sig...)
-// 			} else {
-// 				wsf1 := *wsf
-// 				go func() {
-// 					for val := range wsf1.sigChan {
-// 						for _, registeredSig := range sig {
-// 							if val == registeredSig {
-// 								c <- val
-// 							}
-// 						}
-// 					}
-// 				}()
-// 			}
-// 		},
-// 		svcIsInteractive: func() (bool, error) {
-// 			return wsf.svcIsInteractive()
-// 		},
-// 		svcRun: func(name string, handler wsvc.Handler) error {
-// 			return wsf.svcRun(name, handler)
-// 		},
-// 	}
-
-// 	signalNotify = wsfWrapper.signalNotify
-// 	svcIsAnInteractiveSession = wsfWrapper.svcIsInteractive
-// 	svcRun = wsfWrapper.svcRun
-// }
-
-// type mockWinServiceFuncs struct {
-// 	signalNotify          func(chan<- os.Signal, ...os.Signal)
-// 	svcIsInteractive      func() (bool, error)
-// 	sigChan               chan os.Signal
-// 	svcRun                func(string, wsvc.Handler) error
-// 	ws                    *windowsService
-// 	executeReturnedBool   bool
-// 	executeReturnedUInt32 uint32
-// 	changes               []wsvc.Status
-// }
-
-// func setWindowsServiceFuncs(isInteractive bool, onRunningSendCmd *wsvc.Cmd) (*mockWinServiceFuncs, chan<- wsvc.ChangeRequest) {
-// 	changeRequestChan := make(chan wsvc.ChangeRequest, 4)
-// 	changesChan := make(chan wsvc.Status)
-// 	done := make(chan struct{})
-
-// 	var wsf *mockWinServiceFuncs
-// 	wsf = &mockWinServiceFuncs{
-// 		sigChan: make(chan os.Signal),
-// 		svcIsInteractive: func() (bool, error) {
-// 			return isInteractive, nil
-// 		},
-// 		svcRun: func(name string, handler wsvc.Handler) error {
-// 			ws, ok := handler.(*windowsService)
-// 			if !ok {
-// 				return errors.New("handler is not a windowsService")
-// 			}
-// 			wsf.ws = ws
-// 			wsf.executeReturnedBool, wsf.executeReturnedUInt32 = handler.Execute(nil, changeRequestChan, changesChan)
-// 			done <- struct{}{}
-// 			return nil
-// 		},
-// 	}
-
-// 	var currentState wsvc.State
-
-// 	go func() {
-// 	loop:
-// 		for {
-// 			select {
-// 			case change := <-changesChan:
-// 				wsf.changes = append(wsf.changes, change)
-// 				currentState = change.State
-
-// 				if change.State == wsvc.Running && onRunningSendCmd != nil {
-// 					changeRequestChan <- wsvc.ChangeRequest{
-// 						Cmd:           *onRunningSendCmd,
-// 						CurrentStatus: wsvc.Status{State: currentState},
-// 					}
-// 				}
-// 			case <-done:
-// 				break loop
-// 			}
-// 		}
-// 	}()
-
-// 	setupWinServiceTest(wsf)
-
-// 	return wsf, changeRequestChan
-// }
-
-// func TestWinService_RunWindowsService_NonInteractive(t *testing.T) {
-// 	for _, svcCmd := range []wsvc.Cmd{wsvc.Stop, wsvc.Shutdown} {
-// 		testRunWindowsServiceNonInteractive(t, svcCmd)
-// 	}
-// }
-
-// func testRunWindowsServiceNonInteractive(t *testing.T, svcCmd wsvc.Cmd) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-
-// 	wsf, _ := setWindowsServiceFuncs(false, &svcCmd)
-
-// 	// act
-// 	if err := Run(prg); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	// assert
-// 	changes := wsf.changes
-
-// 	equal(t, 1, startCalled)
-// 	equal(t, 1, stopCalled)
-// 	equal(t, 1, initCalled)
-
-// 	equal(t, 3, len(changes))
-// 	equal(t, wsvc.StartPending, changes[0].State)
-// 	equal(t, wsvc.Running, changes[1].State)
-// 	equal(t, wsvc.StopPending, changes[2].State)
-
-// 	equal(t, false, wsf.executeReturnedBool)
-// 	equal(t, uint32(0), wsf.executeReturnedUInt32)
-
-// 	assertNil(t, wsf.ws.getError())
-// }
-
-// func TestRunWindowsServiceNonInteractive_StartError(t *testing.T) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-// 	prg.start = func() error {
-// 		startCalled++
-// 		return errors.New("start error")
-// 	}
-
-// 	svcStop := wsvc.Stop
-// 	wsf, _ := setWindowsServiceFuncs(false, &svcStop)
-
-// 	// act
-// 	err := Run(prg)
-
-// 	// assert
-// 	equal(t, "start error", err.Error())
-
-// 	changes := wsf.changes
-
-// 	equal(t, 1, startCalled)
-// 	equal(t, 0, stopCalled)
-// 	equal(t, 1, initCalled)
-
-// 	equal(t, 1, len(changes))
-// 	equal(t, wsvc.StartPending, changes[0].State)
-
-// 	equal(t, true, wsf.executeReturnedBool)
-// 	equal(t, uint32(1), wsf.executeReturnedUInt32)
-
-// 	equal(t, "start error", wsf.ws.getError().Error())
-// }
-
-// func TestRunWindowsServiceInteractive_StartError(t *testing.T) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-// 	prg.start = func() error {
-// 		startCalled++
-// 		return errors.New("start error")
-// 	}
-
-// 	wsf, _ := setWindowsServiceFuncs(true, nil)
-
-// 	// act
-// 	err := Run(prg)
-
-// 	// assert
-// 	equal(t, "start error", err.Error())
-
-// 	changes := wsf.changes
-
-// 	equal(t, 1, startCalled)
-// 	equal(t, 0, stopCalled)
-// 	equal(t, 1, initCalled)
-
-// 	equal(t, 0, len(changes))
-// }
-
-// func TestRunWindowsService_BeforeStartError(t *testing.T) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-// 	prg.init = func(Environment) error {
-// 		initCalled++
-// 		return errors.New("before start error")
-// 	}
-
-// 	wsf, _ := setWindowsServiceFuncs(false, nil)
-
-// 	// act
-// 	err := Run(prg)
-
-// 	// assert
-// 	equal(t, "before start error", err.Error())
-
-// 	changes := wsf.changes
-
-// 	equal(t, 0, startCalled)
-// 	equal(t, 0, stopCalled)
-// 	equal(t, 1, initCalled)
-
-// 	equal(t, 0, len(changes))
-// }
-
-// func TestRunWindowsService_IsAnInteractiveSessionError(t *testing.T) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-
-// 	wsf, _ := setWindowsServiceFuncs(false, nil)
-// 	wsf.svcIsInteractive = func() (bool, error) {
-// 		return false, errors.New("IsAnInteractiveSession error")
-// 	}
-
-// 	// act
-// 	err := Run(prg)
-
-// 	// assert
-// 	equal(t, "IsAnInteractiveSession error", err.Error())
-
-// 	changes := wsf.changes
-
-// 	equal(t, 0, startCalled)
-// 	equal(t, 0, stopCalled)
-// 	equal(t, 0, initCalled)
-
-// 	equal(t, 0, len(changes))
-// }
-
-// func TestRunWindowsServiceNonInteractive_RunError(t *testing.T) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-
-// 	svcStop := wsvc.Stop
-// 	wsf, _ := setWindowsServiceFuncs(false, &svcStop)
-// 	wsf.svcRun = func(name string, handler wsvc.Handler) error {
-// 		ws, ok := handler.(*windowsService)
-// 		if !ok {
-// 			return errors.New("handler is not a windowsService")
-// 		}
-// 		wsf.ws = ws
-// 		return errors.New("wsvc.Run error")
-// 	}
-
-// 	// act
-// 	err := Run(prg)
-
-// 	// assert
-// 	equal(t, "wsvc.Run error", err.Error())
-
-// 	changes := wsf.changes
-
-// 	equal(t, 0, startCalled)
-// 	equal(t, 0, stopCalled)
-// 	equal(t, 1, initCalled)
-
-// 	equal(t, 0, len(changes))
-
-// 	assertNil(t, wsf.ws.getError())
-// }
-
-// func TestRunWindowsServiceNonInteractive_Interrogate(t *testing.T) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-
-// 	wsf, changeRequest := setWindowsServiceFuncs(false, nil)
-
-// 	time.AfterFunc(50*time.Millisecond, func() {
-// 		// ignored, PausePending won't be in changes slice
-// 		// make sure we don't panic/err on unexpected values
-// 		changeRequest <- wsvc.ChangeRequest{
-// 			Cmd:           wsvc.Pause,
-// 			CurrentStatus: wsvc.Status{State: wsvc.PausePending},
-// 		}
-// 	})
-
-// 	time.AfterFunc(100*time.Millisecond, func() {
-// 		// handled, Paused will be in changes slice
-// 		changeRequest <- wsvc.ChangeRequest{
-// 			Cmd:           wsvc.Interrogate,
-// 			CurrentStatus: wsvc.Status{State: wsvc.Paused},
-// 		}
-// 	})
-
-// 	time.AfterFunc(200*time.Millisecond, func() {
-// 		// handled, but CurrentStatus overridden with StopPending;
-// 		// ContinuePending won't be in changes slice
-// 		changeRequest <- wsvc.ChangeRequest{
-// 			Cmd:           wsvc.Stop,
-// 			CurrentStatus: wsvc.Status{State: wsvc.ContinuePending},
-// 		}
-// 	})
-
-// 	// act
-// 	if err := Run(prg); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	// assert
-// 	changes := wsf.changes
-
-// 	equal(t, 1, startCalled)
-// 	equal(t, 1, stopCalled)
-// 	equal(t, 1, initCalled)
-
-// 	equal(t, 4, len(changes))
-// 	equal(t, wsvc.StartPending, changes[0].State)
-// 	equal(t, wsvc.Running, changes[1].State)
-// 	equal(t, wsvc.Paused, changes[2].State)
-// 	equal(t, wsvc.StopPending, changes[3].State)
-
-// 	equal(t, false, wsf.executeReturnedBool)
-// 	equal(t, uint32(0), wsf.executeReturnedUInt32)
-
-// 	assertNil(t, wsf.ws.getError())
-// }
-
-// func TestRunWindowsServiceInteractive_StopError(t *testing.T) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-// 	prg.stop = func() error {
-// 		stopCalled++
-// 		return errors.New("stop error")
-// 	}
-
-// 	wsf, _ := setWindowsServiceFuncs(true, nil)
-
-// 	go func() {
-// 		wsf.sigChan <- os.Interrupt
-// 	}()
-
-// 	// act
-// 	err := Run(prg)
-
-// 	// assert
-// 	equal(t, "stop error", err.Error())
-// 	equal(t, 1, startCalled)
-// 	equal(t, 1, stopCalled)
-// 	equal(t, 1, initCalled)
-// 	equal(t, 0, len(wsf.changes))
-// }
-
-// func TestRunWindowsServiceNonInteractive_StopError(t *testing.T) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-// 	prg.stop = func() error {
-// 		stopCalled++
-// 		return errors.New("stop error")
-// 	}
-
-// 	shutdownCmd := wsvc.Shutdown
-// 	wsf, _ := setWindowsServiceFuncs(false, &shutdownCmd)
-
-// 	// act
-// 	err := Run(prg)
-
-// 	// assert
-// 	changes := wsf.changes
-
-// 	equal(t, "stop error", err.Error())
-
-// 	equal(t, 1, startCalled)
-// 	equal(t, 1, stopCalled)
-// 	equal(t, 1, initCalled)
-
-// 	equal(t, 3, len(changes))
-// 	equal(t, wsvc.StartPending, changes[0].State)
-// 	equal(t, wsvc.Running, changes[1].State)
-// 	equal(t, wsvc.StopPending, changes[2].State)
-
-// 	equal(t, true, wsf.executeReturnedBool)
-// 	equal(t, uint32(2), wsf.executeReturnedUInt32)
-
-// 	equal(t, "stop error", wsf.ws.getError().Error())
-// }
-
-// func TestDefaultSignalHandling(t *testing.T) {
-// 	signals := []os.Signal{syscall.SIGINT} // default signal handled
-// 	for _, signal := range signals {
-// 		testSignalNotify(t, signal)
-// 	}
-// }
-
-// func TestUserDefinedSignalHandling(t *testing.T) {
-// 	signals := []os.Signal{syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP}
-// 	for _, signal := range signals {
-// 		testSignalNotify(t, signal, signals...)
-// 	}
-// }
-
-// func testSignalNotify(t *testing.T, signal os.Signal, sig ...os.Signal) {
-// 	// arrange
-// 	var startCalled, stopCalled, initCalled int
-// 	prg := makeProgram(&startCalled, &stopCalled, &initCalled)
-
-// 	wsf, _ := setWindowsServiceFuncs(true, nil)
-
-// 	go func() {
-// 		wsf.sigChan <- signal
-// 	}()
-
-// 	// act
-// 	if err := Run(prg, sig...); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	// assert
-// 	equal(t, 1, startCalled)
-// 	equal(t, 1, stopCalled)
-// 	equal(t, 1, initCalled)
-// 	equal(t, 0, len(wsf.changes))
-// }
-
-// func equal(t *testing.T, expected, actual interface{}) {
-// 	if !reflect.DeepEqual(expected, actual) {
-// 		_, file, line, _ := runtime.Caller(1)
-// 		t.Logf("\033[31m%s:%d:\n\n\t   %#v (expected)\n\n\t!= %#v (actual)\033[39m\n\n",
-// 			filepath.Base(file), line, expected, actual)
-// 		t.FailNow()
-// 	}
-// }
-
-// func assertNil(t *testing.T, object interface{}) {
-// 	if !isNil(object) {
-// 		_, file, line, _ := runtime.Caller(1)
-// 		t.Logf("\033[31m%s:%d:\n\n\t   <nil> (expected)\n\n\t!= %#v (actual)\033[39m\n\n",
-// 			filepath.Base(file), line, object)
-// 		t.FailNow()
-// 	}
-// }
-
-// func isNil(object interface{}) bool {
-// 	if object == nil {
-// 		return true
-// 	}
-
-// 	value := reflect.ValueOf(object)
-// 	kind := value.Kind()
-// 	if kind >= reflect.Chan && kind <= reflect.Slice && value.IsNil() {
-// 		return true
-// 	}
-
-// 	return false
-// }
+import (
+	"errors"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows/svc"
+)
+
+type mockProgram struct {
+	startCalled int
+	stopCalled  int
+	name        string
+	start       func(Environment) error
+	stop        func() error
+}
+
+func (p *mockProgram) Start(env Environment) error {
+	p.startCalled++
+	return p.start(env)
+}
+
+func (p *mockProgram) Stop() error {
+	p.stopCalled++
+	return p.stop()
+}
+
+func (p *mockProgram) Name() string {
+	return p.name
+}
+
+func makeProgram() *mockProgram {
+	return &mockProgram{
+		start: func(Environment) error {
+			return nil
+		},
+		stop: func() error {
+			return nil
+		},
+	}
+}
+
+func mock_svcIsAnInteractiveSession(fnc func() (bool, error)) func() {
+	o := svcIsAnInteractiveSession
+	svcIsAnInteractiveSession = fnc
+	return func() {
+		svcIsAnInteractiveSession = o
+	}
+}
+
+func mock_svcRun(fnc func(string, svc.Handler) error) func() {
+	o := svcRun
+	svcRun = fnc
+	return func() {
+		svcRun = o
+	}
+}
+
+func mock_signalNotify(fnc func(c chan<- os.Signal, sig ...os.Signal)) func() {
+	o := signalNotify
+	signalNotify = fnc
+	return func() {
+		signalNotify = o
+	}
+}
+
+func Test_IsAnInteractiveSession_Error(t *testing.T) {
+	require := require.New(t)
+	prg := makeProgram()
+
+	testErr := errors.New("test error")
+
+	defer mock_svcIsAnInteractiveSession(func() (bool, error) {
+		return false, testErr
+	})()
+
+	err := Run(prg)
+	require.Equal(err, testErr)
+	require.Zero(prg.startCalled)
+	require.Zero(prg.stopCalled)
+}
+
+func Test_svcRun_Call(t *testing.T) {
+	require := require.New(t)
+	prg := makeProgram()
+	prg.name = "test"
+
+	defer mock_svcIsAnInteractiveSession(func() (bool, error) {
+		return false, nil
+	})()
+
+	svcName := ""
+	svcRunCalled := false
+	defer mock_svcRun(func(n string, h svc.Handler) error {
+		svcName = n
+		svcRunCalled = true
+		return nil
+	})()
+
+	err := Run(prg)
+
+	require.NoError(err)
+	require.True(svcRunCalled)
+	require.Equal(svcName, "test")
+	require.Zero(prg.startCalled)
+	require.Zero(prg.stopCalled)
+}
+
+func Test_Start_Error(t *testing.T) {
+	require := require.New(t)
+	prg := makeProgram()
+
+	startErr := errors.New("start error")
+	prg.start = func(Environment) error {
+		return startErr
+	}
+
+	err := Run(prg)
+
+	require.Equal(err, startErr)
+}
+
+func Test_Stop(t *testing.T) {
+	require := require.New(t)
+	prg := makeProgram()
+
+	defer mock_signalNotify(func(c chan<- os.Signal, sig ...os.Signal) {
+		go func() { c <- os.Interrupt }()
+	})()
+
+	err := Run(prg)
+
+	require.NoError(err)
+	require.Equal(prg.startCalled, 1)
+	require.Equal(prg.stopCalled, 1)
+}
+
+func Test_Stop_Error(t *testing.T) {
+	require := require.New(t)
+	prg := makeProgram()
+
+	stopErr := errors.New("stop error")
+	prg.stop = func() error {
+		return stopErr
+	}
+
+	defer mock_signalNotify(func(c chan<- os.Signal, sig ...os.Signal) {
+		go func() { c <- os.Interrupt }()
+	})()
+
+	err := Run(prg)
+
+	require.Equal(err, stopErr)
+	require.Equal(prg.startCalled, 1)
+	require.Equal(prg.stopCalled, 1)
+}
+
+func Test_ExitService(t *testing.T) {
+	require := require.New(t)
+	prg := makeProgram()
+
+	exitErr := errors.New("exit error")
+	prg.start = func(e Environment) error {
+		go func() {
+			time.Sleep(1 * time.Second)
+			e.ExitService(exitErr)
+		}()
+		return nil
+	}
+
+	err := Run(prg)
+
+	require.Equal(err, exitErr)
+	require.Equal(prg.startCalled, 1)
+	require.Equal(prg.stopCalled, 0)
+}
