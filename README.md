@@ -12,6 +12,7 @@ Service Shark is:
 - easy to use
 - lightweight (~2 MB)
 - has zero runtime dependencies (no .NET Framework, Java, ...)
+- [12factor/config](https://12factor.net/config) support
 - written in [golang](https://golang.org/)
 
 Service Shark is not:
@@ -26,11 +27,6 @@ Service Shark is not:
 https://github.com/matthiasng/service-shark/releases/latest
 ```
 
-#### Scoop
-```
-#todo setup scoop bucket + goreleaser
-```
-
 ### Compiling from source
 ```
 git clone https://github.com/matthiasng/service-shark.git
@@ -40,4 +36,25 @@ go build -o service-shark.exe main.go
 
 ## Usage
 
-#todo
+```
+  -cmd string
+        Command [required]
+  -logdir string
+        Log directory.
+        File name: {name}_YYYY-MM-DD_HH-MM-SS (default "./log")
+  -name string
+        Service name [required]
+  -workdir string
+        Working directory [required]
+  -- (terminator)
+        Pass all arguments after the terminator "--" to command.
+        Bind argument to environment variable with "env:{VAR_NAME}".
+```
+
+Exampe
+```
+service-shark.exe -name MyService -workdir C:/MyService -cmd java -- -jar MyProg.jar -Xmx1G -myArg "env:TEST_VALUE"
+```
+Service Shark will run ``java`` with ``-jar MyProg.jar -Xmx1G -myArg "123"`` from ``C:/MyService``.
+
+See [example/test-example-service.ps1](./example/test-example-service.ps1) for a complate example.

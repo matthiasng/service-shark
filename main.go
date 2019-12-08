@@ -15,14 +15,22 @@ var arguments = cli.Arguments{}
 
 func init() {
 	flag.CommandLine.Usage = func() {
-		fmt.Println("Usage of Service Shark:")
+		fmt.Println("Service Shark:")
+		fmt.Println("  Host any executable as a Windows service.")
+		fmt.Println("Usage:")
 		flag.PrintDefaults()
+		fmt.Println("  -- (terminator)")
+		fmt.Println(`	Pass all arguments after the terminator "--" to command.`)
+		fmt.Println(`	Bind argument to environment variable with "env:{VAR_NAME}".`)
+		fmt.Println("Example:")
+		fmt.Println(`  service-shark.exe ... -cmd java -- -jar test.jar -Xmx1G -myArg "env:MY_VALUE"`)
+		fmt.Println(`  => java -jar test.jar -Xmx1G -myArg "my env value"`)
 	}
 
 	flag.StringVar(&arguments.Name, "name", "", "Service name [required]")
 	flag.StringVar(&arguments.WorkingDirectory, "workdir", "", "Working directory [required]")
-	flag.StringVar(&arguments.LogDirectory, "logdir", "./log", "Log directory. Absolute path or relative to working directory.")
-	flag.StringVar(&arguments.Command, "cmd", "", "Command [required]")
+	flag.StringVar(&arguments.LogDirectory, "logdir", "./log", "Log directory.\nFile name: {name}_YYYY-MM-DD_HH-MM-SS")
+	flag.StringVar(&arguments.Command, "cmd", "", `Command [required]`)
 
 	flag.Parse()
 }

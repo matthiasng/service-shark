@@ -26,7 +26,7 @@ func (h *Host) init(env service.Environment) error {
 			return err
 		}
 
-		logFileName := fmt.Sprintf("%s_%s.log", h.Name(), time.Now().Format("02-01-2006_15-04-05"))
+		logFileName := fmt.Sprintf("%s_%s.log", h.Name(), time.Now().Format("2006-01-02-_15-04-05"))
 		logFilePath := path.Join(h.Arguments.LogDirectory, logFileName)
 
 		logFile, err := os.Create(logFilePath)
