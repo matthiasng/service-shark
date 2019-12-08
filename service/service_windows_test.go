@@ -130,7 +130,10 @@ func Test_Stop(t *testing.T) {
 	prg := makeProgram()
 
 	defer mock_signalNotify(func(c chan<- os.Signal, sig ...os.Signal) {
-		go func() { c <- os.Interrupt }()
+		go func() {
+			time.Sleep(2 * time.Second)
+			c <- os.Interrupt
+		}()
 	})()
 
 	err := Run(prg)
@@ -150,7 +153,10 @@ func Test_Stop_Error(t *testing.T) {
 	}
 
 	defer mock_signalNotify(func(c chan<- os.Signal, sig ...os.Signal) {
-		go func() { c <- os.Interrupt }()
+		go func() {
+			time.Sleep(2 * time.Second)
+			c <- os.Interrupt
+		}()
 	})()
 
 	err := Run(prg)
@@ -167,7 +173,7 @@ func Test_ExitService(t *testing.T) {
 	exitErr := errors.New("exit error")
 	prg.start = func(e Environment) error {
 		go func() {
-			time.Sleep(1 * time.Second)
+			time.Sleep(2 * time.Second)
 			e.ExitService(exitErr)
 		}()
 		return nil
