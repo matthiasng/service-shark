@@ -4,7 +4,7 @@
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/matthiasng/service-shark?sort=semver)
 ![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/matthiasng/service-shark/build/master)
 [![codecov](https://codecov.io/gh/matthiasng/service-shark/branch/master/graph/badge.svg)](https://codecov.io/gh/matthiasng/service-shark)
-[![Go Report Card](https://goreportcard.com/badge/github.com/matthiasng/service-wrapper)](https://goreportcard.com/report/github.com/matthiasng/service-wrapper)
+[![Go Report Card](https://goreportcard.com/badge/github.com/matthiasng/service-shark)](https://goreportcard.com/report/github.com/matthiasng/service-shark)
 
 Service Shark can be used to to host any executable as a Windows service.
 
