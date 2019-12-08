@@ -37,17 +37,17 @@ go build -o service-shark.exe main.go
 ## Usage
 
 ```
-  -cmd string
-        Command [required]
-  -logdir string
-        Log directory.
-        File name: {name}_YYYY-MM-DD_HH-MM-SS (default "./log")
   -name string
         Service name [required]
   -workdir string
-        Working directory [required]
+        Working directory (default "./")
+  -logdir string
+        Log directory.
+        File name: {name}_YYYY-MM-DD_HH-MM-SS (default "./log")
+  -cmd string
+        Command [required]
   -- (terminator)
-        Pass all arguments after the terminator "--" to command.
+        Pass all arguments after the terminator "--" to the command.
         Bind argument to environment variable with "env:{VAR_NAME}".
 ```
 

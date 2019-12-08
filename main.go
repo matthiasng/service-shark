@@ -28,7 +28,7 @@ func init() {
 	}
 
 	flag.StringVar(&arguments.Name, "name", "", "Service name [required]")
-	flag.StringVar(&arguments.WorkingDirectory, "workdir", "", "Working directory [required]")
+	flag.StringVar(&arguments.WorkingDirectory, "workdir", "./", "Working directory")
 	flag.StringVar(&arguments.LogDirectory, "logdir", "./log", "Log directory.\nFile name: {name}_YYYY-MM-DD_HH-MM-SS")
 	flag.StringVar(&arguments.Command, "cmd", "", `Command [required]`)
 
