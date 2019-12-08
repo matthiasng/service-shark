@@ -6,7 +6,7 @@
 [![codecov](https://codecov.io/gh/matthiasng/service-shark/branch/master/graph/badge.svg)](https://codecov.io/gh/matthiasng/service-shark)
 [![Go Report Card](https://goreportcard.com/badge/github.com/matthiasng/service-wrapper)](https://goreportcard.com/report/github.com/matthiasng/service-wrapper)
 
-Service Shark can be used to to host any executable as an Windows service.
+Service Shark can be used to to host any executable as a Windows service.
 
 Service Shark is:
 - easy to use
@@ -23,7 +23,7 @@ Service Shark is not:
 
 #### Download from github
 ```
-https://github.com/matthiasng/service-shark/releases/latest)
+https://github.com/matthiasng/service-shark/releases/latest
 ```
 
 #### Scoop

@@ -1,55 +1,29 @@
 package service
 
-import (
-	"fmt"
-	"os"
+// Service interface contains Start and Stop methods which are called
+// when the service is started and stopped.
+//
+// The Start methods must be non-blocking.
+//
+// Implement this interface and pass it to the Run function to start your program.
+type Service interface {
+	// Start must be non-blocking.
+	Start(Environment) error
 
-	"golang.org/x/sys/windows/svc"
-)
+	// Stop is called in response to syscall.SIGINT, syscall.SIGTERM, or when a
+	// Windows Service is stopped.
+	Stop() error
 
-type winService struct {
-	wrapper *Wrapper
+	// Name returns the service name.
+	Name() string
 }
 
-func (w *winService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
-	changes <- svc.Status{State: svc.StartPending}
+// Environment contains information about the environment
+// your application is running in.
+type Environment interface {
+	// IsWindowsService reports whether the program is running as a Windows Service.
+	IsWindowsService() bool
 
-	err := w.wrapper.cmd.Start()
-	if err != nil {
-		_ = w.wrapper.eventLog.Error(1, fmt.Sprintf("Error - cmd.Start(): %v", err))
-		return true, 1
-	}
-
-	go func() {
-		err = w.wrapper.cmd.Wait()
-		if err != nil {
-			_ = w.wrapper.eventLog.Error(1, fmt.Sprintf("Error - cmd.Wait(): %v", err))
-		}
-		os.Exit(1) // error because our service command stopped
-	}()
-
-	changes <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown}
-
-loop:
-	for {
-		c := <-r
-		switch c.Cmd {
-		case svc.Interrogate:
-			changes <- c.CurrentStatus
-		case svc.Stop, svc.Shutdown:
-			changes <- svc.Status{State: svc.StopPending}
-
-			err := w.wrapper.cmd.Process.Kill() // #todo kill child process. Test Command -> "C:/Program Files/PowerShell/7-preview/preview/pwsh-preview.cmd"
-			if err != nil {
-				_ = w.wrapper.eventLog.Error(1, fmt.Sprintf("Error - cmd.Process.Kill(): %v", err))
-			}
-
-			changes <- svc.Status{State: svc.Stopped}
-			break loop
-		default:
-			continue loop
-		}
-	}
-
-	return false, 0
+	// ExitService can be used to signal a service crash. Service will exit with a user define error code 3.
+	ExitService(error)
 }

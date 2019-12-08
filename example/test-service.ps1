@@ -11,8 +11,7 @@ while($true) {
     Write-Host "Loop $i : $Message"
 
     if($i % 2 -eq 0) {
-        #todo stderr
-        Write-Host "Error $i : $Message"
+        Write-Error "Error $i : $Message"
     }
 
     $i++
