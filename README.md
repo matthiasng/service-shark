@@ -4,7 +4,7 @@
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/matthiasng/service-shark?sort=semver)
 ![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/matthiasng/service-shark/build/master)
 [![codecov](https://codecov.io/gh/matthiasng/service-shark/branch/master/graph/badge.svg)](https://codecov.io/gh/matthiasng/service-shark)
-[![Go Report Card](https://goreportcard.com/badge/github.com/matthiasng/service-wrapper)](https://goreportcard.com/report/github.com/matthiasng/service-wrapper)
+[![Go Report Card](https://goreportcard.com/badge/github.com/matthiasng/service-shark)](https://goreportcard.com/report/github.com/matthiasng/service-shark)
 
 Service Shark can be used to to host any executable as a Windows service.
 
@@ -12,6 +12,7 @@ Service Shark is:
 - easy to use
 - lightweight (~2 MB)
 - has zero runtime dependencies (no .NET Framework, Java, ...)
+- [12factor/config](https://12factor.net/config) support
 - written in [golang](https://golang.org/)
 
 Service Shark is not:
@@ -26,11 +27,6 @@ Service Shark is not:
 https://github.com/matthiasng/service-shark/releases/latest
 ```
 
-#### Scoop
-```
-#todo setup scoop bucket + goreleaser
-```
-
 ### Compiling from source
 ```
 git clone https://github.com/matthiasng/service-shark.git
@@ -40,4 +36,25 @@ go build -o service-shark.exe main.go
 
 ## Usage
 
-#todo
+```
+  -name string
+        Service name [required]
+  -workdir string
+        Working directory (default "./")
+  -logdir string
+        Log directory.
+        File name: {name}_YYYY-MM-DD_HH-MM-SS (default "./log")
+  -cmd string
+        Command [required]
+  -- (terminator)
+        Pass all arguments after the terminator "--" to the command.
+        Bind argument to environment variable with "env:{VAR_NAME}".
+```
+
+Exampe
+```
+service-shark.exe -name MyService -workdir C:/MyService -cmd java -- -jar MyProg.jar -Xmx1G -myArg "env:TEST_VALUE"
+```
+Service Shark will run ``java`` with ``-jar MyProg.jar -Xmx1G -myArg "123"`` from ``C:/MyService``.
+
+See [example/test-example-service.ps1](./example/test-example-service.ps1) for a complate example.

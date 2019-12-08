@@ -12,11 +12,9 @@ import (
 )
 
 type Host struct {
-	Arguments     cli.Arguments
-	cmd           *exec.Cmd
-	logFile       *os.File
-	quitSignal    chan struct{}
-	quitCompleted chan struct{}
+	Arguments cli.Arguments
+	cmd       *exec.Cmd
+	logFile   *os.File
 }
 
 func (h *Host) init(env service.Environment) error {
@@ -28,7 +26,7 @@ func (h *Host) init(env service.Environment) error {
 			return err
 		}
 
-		logFileName := fmt.Sprintf("%s_%s.log", h.Name(), time.Now().Format("02-01-2006_15-04-05"))
+		logFileName := fmt.Sprintf("%s_%s.log", h.Name(), time.Now().Format("2006-01-02-_15-04-05"))
 		logFilePath := path.Join(h.Arguments.LogDirectory, logFileName)
 
 		logFile, err := os.Create(logFilePath)
@@ -46,36 +44,32 @@ func (h *Host) init(env service.Environment) error {
 	return h.cmd.Start()
 }
 
+// Start prepares logging and executes the command
 func (h *Host) Start(env service.Environment) error {
 	err := h.init(env)
 	if err != nil {
 		return err
 	}
 
-	h.quitSignal = make(chan struct{})
-	h.quitCompleted = make(chan struct{})
-
-	go func() {
-		<-h.quitSignal
-		_ = h.cmd.Process.Kill()
-		close(h.quitCompleted)
-	}()
-
 	go func() {
 		err = h.cmd.Wait()
+		h.cleanup()
 		env.ExitService(err) // service command stopped -> service error
 	}()
 
 	return nil
 }
 
+// Stop kills the command and closes the log file
 func (h *Host) Stop() error {
-	close(h.quitSignal)
-	<-h.quitCompleted
-
-	_ = h.logFile.Close()
+	_ = h.cmd.Process.Kill()
+	h.cleanup()
 
 	return nil
+}
+
+func (h *Host) cleanup() {
+	_ = h.logFile.Close()
 }
 
 func (h *Host) Name() string {
