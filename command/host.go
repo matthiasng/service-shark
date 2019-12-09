@@ -11,6 +11,7 @@ import (
 	"github.com/matthiasng/service-shark/service"
 )
 
+// Host implements the service.Program interface to run any command as service
 type Host struct {
 	Arguments cli.Arguments
 	cmd       *exec.Cmd
