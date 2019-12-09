@@ -51,10 +51,10 @@ go build -o service-shark.exe main.go
         Bind argument to environment variable with "env:{VAR_NAME}".
 ```
 
-Exampe
+Example
 ```
 service-shark.exe -name MyService -workdir C:/MyService -cmd java -- -jar MyProg.jar -Xmx1G -myArg "env:TEST_VALUE"
 ```
 Service Shark will run ``java`` with ``-jar MyProg.jar -Xmx1G -myArg "123"`` from ``C:/MyService``.
 
-See [example/test-example-service.ps1](./example/test-example-service.ps1) for a complate example.
+See [example/test-example-service.ps1](./example/test-example-service.ps1) for a complete example.
