@@ -16,7 +16,7 @@ Service Shark is:
 - written in [golang](https://golang.org/)
 
 Service Shark is not:
-- a service manager. Their are already easy ways to manage Windows services ([powershell](https://docs.microsoft.com/de-de/powershell/scripting/samples/managing-services?view=powershell-6), [cmd](https://docs.microsoft.com/de-de/windows-server/administration/windows-commands/sc-create), [NSSM](https://nssm.cc/))
+- a service manager. There are already ways to manage Windows services ([powershell](https://docs.microsoft.com/de-de/powershell/scripting/samples/managing-services?view=powershell-6), [cmd](https://docs.microsoft.com/de-de/windows-server/administration/windows-commands/sc-create), [NSSM](https://nssm.cc/))
 
 ## Installation
 
@@ -53,8 +53,8 @@ go build -o service-shark.exe main.go
 
 Example
 ```
-service-shark.exe -name MyService -workdir C:/MyService -cmd java -- -jar MyProg.jar -Xmx1G -myArg "env:TEST_VALUE"
+service-shark.exe -name MyService -workdir C:/MyService -cmd java -- -jar MyProg.jar -Xmx1G -myArg "env:MY_ENV_VALUE"
 ```
-Service Shark will run ``java`` with ``-jar MyProg.jar -Xmx1G -myArg "123"`` from ``C:/MyService``.
+Service Shark will run ``java`` with ``-jar MyProg.jar -Xmx1G -myArg "123"`` from ``C:/MyService`` (``MY_ENV_VALUE`` is ``123``).
 
 See [example/test-example-service.ps1](./example/test-example-service.ps1) for a complete example.
