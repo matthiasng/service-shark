@@ -1,59 +1,15 @@
-// +build windows
-
 package service
 
 import (
 	"os"
-	"os/signal"
-	"path/filepath"
 	"syscall"
 
 	wsvc "golang.org/x/sys/windows/svc"
 )
 
-// Create variables for svc and signal functions so we can mock them in tests
-var svcIsAnInteractiveSession = wsvc.IsAnInteractiveSession
-var svcRun = wsvc.Run
-var signalNotify = signal.Notify
-
-// FixWorkingDirectory changes the working directory to the exeutable directory.
-// The working directory for a Windows Service is C:\Windows\System32 ...
-func FixWorkingDirectory() error {
-	dir := filepath.Dir(os.Args[0])
-	return os.Chdir(dir)
-}
-
-// Run runs an implementation of the Service interface.
-//
-// Run will block until the Windows Service is stopped or Ctrl+C is pressed if
-// running from the console.
-//
-// Stopping the Windows Service and Ctrl+C will call the Service's Stop method to
-// initiate a graceful shutdown.
-//
-// Note that WM_CLOSE is not handled (end task) and the Service's Stop method will
-// not be called.
-func Run(service Service) error {
-	var err error
-
-	interactive, err := svcIsAnInteractiveSession()
-	if err != nil {
-		return err
-	}
-
-	ws := &windowsService{
-		name:          service.Name(),
-		svc:           service,
-		isInteractive: interactive,
-		signalErrChan: make(chan error, 1),
-	}
-
-	return ws.run()
-}
-
 type windowsService struct {
 	name          string
-	svc           Service
+	program       Program
 	isInteractive bool
 	signalErrChan chan error
 	serviceErr    error
@@ -112,7 +68,7 @@ func (ws *windowsService) runInteractive(name string, handler wsvc.Handler) erro
 func (ws *windowsService) Execute(args []string, r <-chan wsvc.ChangeRequest, changes chan<- wsvc.Status) (bool, uint32) {
 	changes <- wsvc.Status{State: wsvc.StartPending}
 
-	if err := ws.svc.Start(ws); err != nil {
+	if err := ws.program.Start(ws); err != nil {
 		ws.serviceErr = err
 		return true, 1
 	}
@@ -127,7 +83,7 @@ loop:
 				changes <- c.CurrentStatus
 			case wsvc.Stop, wsvc.Shutdown:
 				changes <- wsvc.Status{State: wsvc.StopPending}
-				err := ws.svc.Stop()
+				err := ws.program.Stop()
 				if err != nil {
 					ws.serviceErr = err
 					return true, 2
