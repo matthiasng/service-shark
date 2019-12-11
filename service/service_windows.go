@@ -9,7 +9,7 @@ import (
 
 type windowsService struct {
 	name          string
-	svc           Program
+	program       Program
 	isInteractive bool
 	signalErrChan chan error
 	serviceErr    error
@@ -68,7 +68,7 @@ func (ws *windowsService) runInteractive(name string, handler wsvc.Handler) erro
 func (ws *windowsService) Execute(args []string, r <-chan wsvc.ChangeRequest, changes chan<- wsvc.Status) (bool, uint32) {
 	changes <- wsvc.Status{State: wsvc.StartPending}
 
-	if err := ws.svc.Start(ws); err != nil {
+	if err := ws.program.Start(ws); err != nil {
 		ws.serviceErr = err
 		return true, 1
 	}
@@ -83,7 +83,7 @@ loop:
 				changes <- c.CurrentStatus
 			case wsvc.Stop, wsvc.Shutdown:
 				changes <- wsvc.Status{State: wsvc.StopPending}
-				err := ws.svc.Stop()
+				err := ws.program.Stop()
 				if err != nil {
 					ws.serviceErr = err
 					return true, 2
