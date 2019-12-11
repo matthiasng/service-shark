@@ -31,7 +31,7 @@ func Run(program Program) error {
 
 	ws := &windowsService{
 		name:          program.Name(),
-		svc:           program,
+		program:       program,
 		isInteractive: interactive,
 		signalErrChan: make(chan error, 1),
 	}
