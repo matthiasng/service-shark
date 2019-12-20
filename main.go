@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/matthiasng/service-shark/cli"
 	"github.com/matthiasng/service-shark/command"
@@ -14,7 +15,7 @@ import (
 var (
 	version = "dev"
 	commit  = "none"
-	date    = "unknown"
+	date    = time.Now().Format(time.RFC3339)
 )
 
 var (
