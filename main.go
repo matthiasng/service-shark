@@ -11,7 +11,16 @@ import (
 	"github.com/matthiasng/service-shark/service"
 )
 
-var arguments = cli.Arguments{}
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
+var (
+	printVersion *bool = nil
+	arguments          = cli.Arguments{}
+)
 
 func init() {
 	flag.CommandLine.Usage = func() {
@@ -31,11 +40,17 @@ func init() {
 	flag.StringVar(&arguments.WorkingDirectory, "workdir", "./", "Working directory")
 	flag.StringVar(&arguments.LogDirectory, "logdir", "./log", "Log directory.\nFile name: {name}_YYYY-MM-DD_HH-MM-SS")
 	flag.StringVar(&arguments.Command, "cmd", "", `Command [required]`)
+	printVersion = flag.Bool("version", false, "Print version and exit")
 
 	flag.Parse()
 }
 
 func main() {
+	if *printVersion {
+		fmt.Printf("%v, commit %v, built at %v", version, commit, date)
+		os.Exit(0)
+	}
+
 	if err := service.FixWorkingDirectory(); err != nil {
 		log.Fatal(err)
 	}

@@ -46,6 +46,8 @@ go build -o service-shark.exe main.go
         File name: {name}_YYYY-MM-DD_HH-MM-SS (default "./log")
   -cmd string
         Command [required]
+  -version
+        Print version and exit
   -- (terminator)
         Pass all arguments after the terminator "--" to the command.
         Bind argument to environment variable with "env:{VAR_NAME}".
