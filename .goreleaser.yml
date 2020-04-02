@@ -35,5 +35,5 @@ scoop:
     owner: matthiasng
     name: scoop-bucket
   homepage: https://github.com/matthiasng/service-shark
+  description: Host any executable or script as a Windows service
   license: MIT
-  
