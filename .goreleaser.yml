@@ -30,3 +30,10 @@ archives:
     format_overrides:
     - goos: windows
       format: zip
+scoop:
+  bucket:
+    owner: matthiasng
+    name: scoop-bucket
+  homepage: https://github.com/matthiasng/service-shark
+  license: MIT
+  
