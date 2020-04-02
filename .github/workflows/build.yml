@@ -12,19 +12,19 @@ jobs:
   lint:
     runs-on: windows-latest
     steps:
-      - name: Check out code
+      - name: checkout
         uses: actions/checkout@v1.2.0
 
-      - name: Set up Go
+      - name: setup go
         uses: actions/setup-go@v1.1.2
         with:
           go-version: 1.13.x
 
-      - name: Install golangci-lint
+      - name: setup golangci-lint
         run: |
           go get github.com/golangci/golangci-lint/cmd/golangci-lint
 
-      - name: Run linters
+      - name: run golangci-lint
         run: |
           $env:PATH += ";$(go env GOPATH)/bin"  # temporary fix. See https://github.com/actions/setup-go/issues/14
           golangci-lint run
@@ -32,18 +32,18 @@ jobs:
   test:
     runs-on: windows-latest
     steps:
-      - name: Check out code
+      - name: checkout
         uses: actions/checkout@v1.2.0
 
-      - name: Set up Go
+      - name: setup go
         uses: actions/setup-go@v1.1.2
         with:
           go-version: 1.13.x
 
-      - name: Run tests
+      - name: run tests
         run: go test -v -covermode=count -coverprofile coverage.out ./...
 
-      - name: Upload Coverage report to CodeCov
+      - name: upload coverage report to codecov
         uses: codecov/codecov-action@v1.0.4
         with:
           token: ${{secrets.CODECOV_TOKEN}}
@@ -53,39 +53,42 @@ jobs:
     runs-on: windows-latest
     needs: [lint, test]
     steps:
-    - name: Checkout code
+    - name: checkout
       uses: actions/checkout@v1.2.0
 
-    - name: Set up Go
+    - name: setup go
       uses: actions/setup-go@v1.1.2
       with:
         go-version: 1.13.x
 
-    - name: build
-      run: |
-        $env:GOOS="windows"
-        $env:GOARCH="amd64"
-        go build -o bin/service-shark-amd64.exe
+    - name: run goreleaser (--snapshot)
+      uses: goreleaser/goreleaser-action@v1
+      with:
+        version: latest
+        args: release --rm-dist --snapshot
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: upload artifacts
       uses: actions/upload-artifact@master
       with:
         name: binaries
-        path: bin/
+        path: dist/
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
-    name: Release on GitHub
+    needs: [build]
     runs-on: windows-latest
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v1.2.0
 
-      - name: Set up Go
+      - name: setup go
         uses: actions/setup-go@v1.1.2
         with:
           go-version: 1.13.x
 
-      - name: Run GoReleaser
+      - name: run goreleaser
         uses: goreleaser/goreleaser-action@v1
         with:
           version: latest
