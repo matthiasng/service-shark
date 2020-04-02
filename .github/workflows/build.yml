@@ -68,7 +68,7 @@ jobs:
         args: release --rm-dist --snapshot
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+
     - name: upload artifacts
       uses: actions/upload-artifact@master
       with:
@@ -94,4 +94,4 @@ jobs:
           version: latest
           args: release --rm-dist --debug
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SERVICE_SHARK_TOKEN }}
