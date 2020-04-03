@@ -2,7 +2,7 @@
 
 ![GitHub](https://img.shields.io/github/license/matthiasng/service-shark)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/matthiasng/service-shark?sort=semver)
-![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/matthiasng/service-shark/build/master)
+![build](https://github.com/matthiasng/service-shark/workflows/build/badge.svg?branch=master)
 [![codecov](https://codecov.io/gh/matthiasng/service-shark/branch/master/graph/badge.svg)](https://codecov.io/gh/matthiasng/service-shark)
 [![Go Report Card](https://goreportcard.com/badge/github.com/matthiasng/service-shark)](https://goreportcard.com/report/github.com/matthiasng/service-shark)
 
